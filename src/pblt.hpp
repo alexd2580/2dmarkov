@@ -41,7 +41,7 @@ public:
   virtual ~PBLT_node(void) = default;
 
   Key get_key(void) const { return key; }
-
+  PBLT_node& get_successors(void) const { return *successors; }
   bool is_empty(void) const { return !online; }
 
   PBLT_node& visit(Key k)
@@ -70,14 +70,36 @@ public:
       online = true;
       key = k;
       this_count++;
+      successors = std::make_unique<PBLT_node<Key>>();
       left = std::make_unique<PBLT_node<Key>>();
       right = std::make_unique<PBLT_node<Key>>();
       return *this;
     }
   }
 
+  PBLT_node& find(Key k)
+  {
+    if(!online)
+    {
+      std::cerr << "Key not in tree" << std::endl;
+      return *this;
+    }
+    if(k < key)
+      return left->find(k);
+    else if(k == key)
+      return *this;
+    else
+      return right->find(k);
+  }
+
   PBLT_node& find_random(uint32_t rnd)
   {
+    if(!online)
+    {
+      std::cerr << "No further successors here" << std::endl;
+      return *this;
+    }
+
     rnd %= total_count;
     /*std::cout << "rnd " << rnd << " leftc " << left_count << " rightc "
               << right_count << " thisc " << this_count << " totc "
@@ -124,6 +146,15 @@ public:
       left->print(depth);
     }
   }
+
+  static PBLT_node& select_random(PBLT_node& a, PBLT_node& b, uint32_t rnd)
+  {
+    rnd %= a.total_count + b.total_count;
+    if(rnd < a.total_count)
+      return a;
+    else
+      return b;
+  }
 };
 
 template <typename Key> class PBLT_ref
@@ -146,6 +177,8 @@ public:
       pblt_node.print(0);
   }
 
+  PBLT_node<Key>& get_node(void) const { return pblt_node; }
+
   /**
    * Inserts a new element. Increments counter by one
    */
@@ -155,4 +188,6 @@ public:
   {
     return pblt_node.find_random(rnd);
   }
+
+  PBLT_node<Key>& find(Key k) { return pblt_node.find(k); }
 };
