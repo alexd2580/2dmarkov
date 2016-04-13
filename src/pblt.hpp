@@ -40,6 +40,8 @@ public:
 
   virtual ~PBLT_node(void) = default;
 
+  Key get_key(void) const { return key; }
+
   bool is_empty(void) const { return !online; }
 
   PBLT_node& visit(Key k)
@@ -83,7 +85,7 @@ public:
     if(rnd < left_count)
       return left->find_random(rnd);
     else if(rnd - left_count < this_count)
-      return successors;
+      return *this;
     else
       return right->find_random(rnd);
   }
