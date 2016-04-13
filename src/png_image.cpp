@@ -176,10 +176,13 @@ string PNG_image::next_free_filename(string const& fname)
 {
   string name = fname;
 
-  size_t splitpoint = fname.length() - 4;
-  string ext = fname.substr(splitpoint);
-  if(ext.compare(".PNG") == 0 || ext.compare(".png") == 0)
-    name = fname.substr(0, splitpoint);
+  if(fname.length() >= 5)
+  {
+    size_t splitpoint = fname.length() - 4;
+    string ext = fname.substr(splitpoint);
+    if(ext.compare(".PNG") == 0 || ext.compare(".png") == 0)
+      name = fname.substr(0, splitpoint);
+  }
 
   int suffix = 0;
   string new_name = name + "_" + std::to_string(suffix) + ".png";

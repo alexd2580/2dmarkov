@@ -13,63 +13,68 @@ template <typename Key> class PBLT_node
 {
 
 public:
-  using Ptr = std::shared_ptr<PBLT_node<Key>>;
+  using Ptr = std::unique_ptr<PBLT_node<Key>>;
 
 private:
+  bool online;
+
   uint32_t total_count;
 
   Ptr left;
   uint32_t left_count;
 
-  uint32_t this_count;
+  Key key;
   Ptr successors;
+  uint32_t this_count;
 
   Ptr right;
   uint32_t right_count;
 
 public:
-  Key const key;
-
-  PBLT_node(Key k) : successors(), key(k)
+  PBLT_node() : key(), successors()
   {
-    this_count = total_count = 1;
+    online = false;
+    this_count = total_count = 0;
     left_count = right_count = 0;
   }
 
   virtual ~PBLT_node(void) = default;
 
-  Ptr visit(Ptr this_, Key k)
+  bool is_empty(void) const { return !online; }
+
+  PBLT_node& visit(Key k)
   {
     total_count++;
-    if(k == key)
+    if(online)
     {
-      this_count++;
-      return this_;
-    }
-    if(k < key)
-    {
-      left_count++;
-      if(!left)
+      if(k == key)
       {
-        left = std::make_shared<PBLT_node<Key>>(k);
-        return left;
+        this_count++;
+        return *this;
       }
-      return left->visit(left, k);
+      if(k < key)
+      {
+        left_count++;
+        return left->visit(k);
+      }
+      else
+      {
+        right_count++;
+        return right->visit(k);
+      }
     }
     else
     {
-      right_count++;
-      if(!right)
-      {
-        right = std::make_shared<PBLT_node<Key>>(k);
-        return right;
-      }
-      else
-        return right->visit(right, k);
+      online = true;
+      key = k;
+      this_count++;
+      left = std::make_unique<PBLT_node<Key>>();
+      right = std::make_unique<PBLT_node<Key>>();
+      return *this;
     }
   }
 
-  Ptr find_random(uint32_t rnd)
+  PBLT_node& find_random(uint32_t rnd)
   {
     rnd %= total_count;
     /*std::cout << "rnd " << rnd << " leftc " << left_count << " rightc "
@@ -94,6 +99,9 @@ public:
     cout << "| total: " << total_count << endl;
     for(int i = 0; i < depth - 1; i++)
       cout << "| ";
+    cout << "| this: " << this_count << endl;
+    for(int i = 0; i < depth - 1; i++)
+      cout << "| ";
     cout << "| key: " << (int)key << endl;
     for(int i = 0; i < depth - 1; i++)
       cout << "| ";
@@ -105,50 +113,44 @@ public:
       cout << "| ";
     cout << "+-+----" << endl;
 
-    if(right)
+    if(right->online)
     {
-      right->print(depth + (left ? 1 : 0));
+      right->print(depth + 1);
     }
-    if(left)
+    if(left->online)
     {
       left->print(depth);
     }
   }
 };
 
-template <typename Key> class PBLT
+template <typename Key> class PBLT_ref
 {
-  using Node_Ptr = typename PBLT_node<Key>::Ptr;
-  Node_Ptr node;
+private:
+  PBLT_node<Key>& pblt_node;
 
 public:
-  explicit PBLT(void) = default;
-  explicit PBLT(Node_Ptr a) : node(a) {}
-  ~PBLT(void) = default;
-
-  std::unique_ptr<PBLT> copy_ptr(void) { return std::make_unique<PBLT>(node); }
+  PBLT_ref(void) = delete;
+  explicit PBLT_ref(PBLT_node<Key>& node_ref) : pblt_node(node_ref) {}
+  explicit PBLT_ref(PBLT_ref const& a) : pblt_node(a.pblt_node) {}
+  ~PBLT_ref(void) = default;
 
   void print(void)
   {
     using namespace std;
-    if(!node)
+    if(pblt_node.is_empty())
       cout << "empty" << endl;
     else
-      node->print(0);
+      pblt_node.print(0);
   }
 
   /**
    * Inserts a new element. Increments counter by one
    */
-  std::unique_ptr<PBLT> visit(Key k)
-  {
-    if(!node)
-    {
-      node.reset(new PBLT_node<Key>(k));
-      return std::make_unique<PBLT>(node);
-    }
-    return std::make_unique<PBLT>(node->visit(node, k));
-  }
+  PBLT_node<Key>& visit(Key k) { return pblt_node.visit(k); }
 
-  PBLT<Key> find_random(uint32_t rnd) { return PBLT(node->find_random(rnd)); }
+  PBLT_node<Key>& find_random(uint32_t rnd)
+  {
+    return pblt_node.find_random(rnd);
+  }
 };
